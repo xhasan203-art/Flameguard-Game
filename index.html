@@ -811,7 +811,7 @@
   function startGame() {
     hideAllScreens();
     score = 0; lives = MAX_LIVES; combo = 0; totalPopped = 0;
-    spawnInterval = 900; running = true; milestoneShown = false;
+    spawnInterval = 900; running = true;
     reactionTimes = [];
     updateUI();
     clearAllTimers();
@@ -895,40 +895,6 @@
     h.el.classList.add('hit-flash');
     setTimeout(() => h.el.classList.remove('hit-flash'), 320);
     updateCombo();
-    // Hit 30 — show celebration but keep playing!
-    if (score === GOAL) triggerWinMilestone();
-  }
-
-  let milestoneShown = false;
-  function triggerWinMilestone() {
-    if (milestoneShown) return;
-    milestoneShown = true;
-    confetti();
-    // Show a floating banner, not a blocking screen
-    const banner = document.createElement('div');
-    banner.style.cssText = `
-      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.7);
-      background:linear-gradient(135deg,#1d2d40,#162030);
-      border:2px solid rgba(255,209,102,0.5);
-      border-radius:20px; padding:20px 32px; z-index:80;
-      text-align:center; box-shadow:0 0 60px rgba(255,209,102,0.2);
-      animation:milestoneIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
-    `;
-    banner.innerHTML = `
-      <div style="font-size:2.5rem;">🕯️</div>
-      <div style="font-family:'Fredoka One',cursive;font-size:1.6rem;color:#FFD166;margin:6px 0;">You Won!</div>
-      <div style="font-size:0.9rem;color:#7a8ca0;">30 pts reached — candle is yours!<br><b style="color:#F0F4FF;">Keep going for a higher score!</b></div>
-    `;
-    document.body.appendChild(banner);
-    const styleEl = document.createElement('style');
-    styleEl.textContent = '@keyframes milestoneIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.7)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}';
-    document.head.appendChild(styleEl);
-    setTimeout(() => {
-      banner.style.transition = 'opacity 0.5s, transform 0.5s';
-      banner.style.opacity = '0';
-      banner.style.transform = 'translate(-50%,-50%) scale(0.85)';
-      setTimeout(() => banner.remove(), 500);
-    }, 2200);
   }
 
   // ── LOSE LIFE ──
