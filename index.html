@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlameGuard – Leak Buster Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0f1923;
+    --surface:  #162030;
+    --card:     #1d2d40;
+    --flame:    #FF4D00;
+    --flame2:   #FF8C42;
+    --green:    #00D26A;
+    --gold:     #FFD166;
+    --blue:     #06AED5;
+    --text:     #F0F4FF;
+    --muted:    #7a8ca0;
+    --danger:   #FF3860;
+    --hole-bg:  #0a1520;
+    --hole-rim: #1a2e42;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated background bubbles */
+  .bg-bubbles {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .bubble {
+    position: absolute; border-radius: 50%;
+    opacity: 0.06; animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(110vh) scale(0.5); opacity: 0.08; }
+    to   { transform: translateY(-10vh) scale(1.2); opacity: 0; }
+  }
+
+  /* ── WRAPPER ── */
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 720px; margin: 0 auto;
+    padding: 24px 16px 60px;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    animation: dropIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes dropIn {
+    from { opacity: 0; transform: translateY(-30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .logo {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 8vw, 3.2rem);
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, var(--flame), var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 12px rgba(255,77,0,0.4));
+  }
+
+  .tagline {
+    font-size: 1rem; color: var(--muted); font-weight: 600; margin-top: 4px;
+  }
+
+  /* ── SCOREBOARD ── */
+  .scoreboard {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    width: 100%;
+    animation: dropIn 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  .score-card {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 12px 20px;
+    text-align: center; flex: 1; min-width: 100px;
+  }
+
+  .score-card .sc-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .score-card .sc-val   { font-family: 'Fredoka One', cursive; font-size: 2rem; line-height: 1.1; }
+  .score-card.sc-score  .sc-val { color: var(--gold); }
+  .score-card.sc-lives  .sc-val { color: var(--danger); }
+  .score-card.sc-timer  .sc-val { color: var(--blue); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    width: 100%; background: var(--card); border-radius: 100px; height: 10px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .progress-bar {
+    height: 100%; border-radius: 100px;
+    background: linear-gradient(90deg, var(--flame), var(--gold));
+    transition: width 0.3s linear;
+    box-shadow: 0 0 10px rgba(255,77,0,0.5);
+  }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    width: 100%;
+    animation: dropIn 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  /* ── HOLE ── */
+  .hole {
+    aspect-ratio: 1;
+    background: radial-gradient(ellipse at 50% 70%, var(--hole-bg) 60%, var(--hole-rim) 100%);
+    border-radius: 50%;
+    border: 2px solid var(--hole-rim);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: inset 0 8px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+    transition: box-shadow 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .hole:active { box-shadow: inset 0 8px 24px rgba(0,0,0,0.8); }
+
+  /* The character inside the hole */
+  .critter {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, 160%);
+    font-size: clamp(2.2rem, 8vw, 3.4rem);
+    transition: transform 0.18s cubic-bezier(0.34,1.2,0.64,1);
+    user-select: none; pointer-events: none;
+    filter: drop-shadow(0 -4px 8px rgba(0,0,0,0.5));
+    line-height: 1;
+  }
+
+  .hole.up .critter    { transform: translate(-50%, -50%); }
+  .hole.danger .critter { animation: wobble 0.3s ease-in-out infinite alternate; }
+  .hole.whacked .critter { transform: translate(-50%, 160%) !important; transition: transform 0.08s ease-in; }
+  .hole.whacked { pointer-events: none; }
+
+  @keyframes wobble {
+    from { transform: translate(-50%, -50%) rotate(-8deg); }
+    to   { transform: translate(-50%, -50%) rotate(8deg); }
+  }
+
+  /* Hit flash */
+  .hole.hit-flash {
+    animation: hitFlash 0.3s ease;
+  }
+  @keyframes hitFlash {
+    0%  { background: radial-gradient(ellipse at 50% 70%, rgba(0,210,106,0.4) 60%, var(--hole-rim) 100%); }
+    100%{ background: radial-gradient(ellipse at 50% 70%, var(--hole-bg) 60%, var(--hole-rim) 100%); }
+  }
+
+  /* Miss flash */
+  .hole.miss-flash {
+    animation: missFlash 0.3s ease;
+  }
+  @keyframes missFlash {
+    0%  { background: radial-gradient(ellipse at 50% 70%, rgba(255,56,96,0.4) 60%, var(--hole-rim) 100%); }
+    100%{ background: radial-gradient(ellipse at 50% 70%, var(--hole-bg) 60%, var(--hole-rim) 100%); }
+  }
+
+  /* Floating score popups */
+  .popup {
+    position: fixed; pointer-events: none; z-index: 50;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.6rem;
+    animation: popFloat 0.8s ease forwards;
+  }
+  @keyframes popFloat {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+  }
+
+  /* ── INSTRUCTIONS ── */
+  .instructions {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 16px 20px;
+    font-size: 0.88rem; color: var(--muted); line-height: 1.7;
+    text-align: center; width: 100%;
+  }
+
+  .instructions strong { color: var(--text); }
+  .instructions .emoji-key { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
+  .instructions .ek { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.3rem; letter-spacing: 0.04em;
+    background: linear-gradient(135deg, var(--flame), var(--flame2));
+    color: #fff; border: none; border-radius: 50px;
+    padding: 14px 40px; cursor: pointer;
+    box-shadow: 0 6px 24px rgba(255,77,0,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(255,77,0,0.55); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem; letter-spacing: 0.03em;
+    background: transparent; color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 50px;
+    padding: 10px 28px; cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--flame); color: var(--flame2); }
+
+  /* ── OVERLAY SCREENS ── */
+  .screen {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(10,18,28,0.92);
+    backdrop-filter: blur(10px);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    text-align: center; padding: 24px;
+  }
+
+  .screen.active { display: flex; }
+
+  .screen-box {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 28px; padding: 36px 32px;
+    max-width: 420px; width: 100%;
+    animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .screen-icon { font-size: 4.5rem; margin-bottom: 8px; display: block; }
+  .screen-title { font-family: 'Fredoka One', cursive; font-size: 2.2rem; line-height: 1.1; margin-bottom: 10px; }
+  .screen-sub { font-size: 0.95rem; color: var(--muted); line-height: 1.6; }
+
+  /* WIN screen */
+  .win .screen-title { color: var(--gold); }
+  .win .screen-box { border-color: rgba(255,209,102,0.3); box-shadow: 0 0 60px rgba(255,209,102,0.15); }
+
+  .win-reward {
+    background: linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,77,0,0.08));
+    border: 1px solid rgba(255,209,102,0.3);
+    border-radius: 16px; padding: 16px 20px; margin: 16px 0;
+  }
+  .win-reward p { font-size: 1rem; font-weight: 700; color: var(--gold); }
+  .win-reward small { font-size: 0.82rem; color: var(--muted); }
+
+  /* LOSE screen */
+  .lose .screen-title { color: var(--danger); }
+  .lose .screen-box { border-color: rgba(255,56,96,0.3); box-shadow: 0 0 60px rgba(255,56,96,0.1); }
+
+  /* START screen */
+  .start .screen-title { color: var(--flame2); }
+  .start .screen-box { border-color: rgba(255,77,0,0.25); }
+
+  .start-rules { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; text-align: left; }
+  .rule { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text); }
+  .rule-icon { font-size: 1.3rem; flex-shrink: 0; }
+
+  /* ── CONFETTI ── */
+  .confetti-piece {
+    position: fixed; top: -10px; z-index: 200; pointer-events: none;
+    width: 10px; height: 10px; border-radius: 2px;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ── COMBO INDICATOR ── */
+  .combo-bar {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem; color: var(--gold);
+    min-height: 1.6rem; text-align: center;
+    transition: opacity 0.3s;
+    text-shadow: 0 0 12px rgba(255,209,102,0.6);
+  }
+
+  /* ── NAME ENTRY ── */
+  .name-input-wrap {
+    display: flex; flex-direction: column; gap: 10px; margin: 16px 0;
+  }
+  .name-input {
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 12px; padding: 12px 16px;
+    color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 1.1rem; font-weight: 700;
+    outline: none; text-align: center; width: 100%;
+    transition: border-color 0.2s;
+  }
+  .name-input:focus { border-color: var(--flame); }
+  .name-input::placeholder { color: var(--muted); font-weight: 400; }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard {
+    width: 100%; margin-top: 6px;
+  }
+  .lb-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem; color: var(--gold);
+    margin-bottom: 10px; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .lb-empty { font-size: 0.85rem; color: var(--muted); text-align: center; padding: 12px 0; }
+  .lb-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 6px;
+    transition: background 0.3s;
+  }
+  .lb-row.lb-highlight { background: rgba(255,209,102,0.1); border-color: rgba(255,209,102,0.3); }
+  .lb-rank { font-family: 'Fredoka One', cursive; font-size: 1rem; color: var(--muted); width: 24px; text-align: center; flex-shrink: 0; }
+  .lb-rank.gold   { color: #FFD166; }
+  .lb-rank.silver { color: #C0C0C0; }
+  .lb-rank.bronze { color: #CD7F32; }
+  .lb-name { flex: 1; font-weight: 700; font-size: 0.92rem; color: var(--text); }
+  .lb-score { font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: var(--gold); }
+  .lb-won { font-size: 0.75rem; margin-left: 4px; }
+
+  /* Leaderboard section in game UI */
+  .lb-section {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 16px 18px;
+  }
+
+  /* Delete button on lb rows */
+  .lb-delete {
+    background: none; border: none; cursor: pointer;
+    font-size: 0.85rem; color: rgba(255,56,96,0.4);
+    padding: 2px 5px; border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+    flex-shrink: 0; line-height: 1;
+  }
+  .lb-delete:hover { color: #FF3860; background: rgba(255,56,96,0.1); }
+
+  /* Password modal */
+  .pw-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+  }
+  .pw-overlay.active { display: flex; }
+  .pw-box {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px; padding: 28px 28px 22px;
+    width: min(380px, 92vw); text-align: center;
+    animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .pw-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .pw-title { font-family:'Fredoka One',cursive; font-size: 1.4rem; color: var(--text); margin-bottom: 6px; }
+  .pw-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; }
+  .pw-input {
+    width: 100%; background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 10px; padding: 11px 14px;
+    color: var(--text); font-family: 'Nunito', sans-serif;
+    font-size: 1rem; font-weight: 700; text-align: center;
+    outline: none; letter-spacing: 0.06em;
+    transition: border-color 0.2s;
+    margin-bottom: 12px;
+  }
+  .pw-input:focus { border-color: var(--flame); }
+  .pw-input.pw-error { border-color: var(--danger); animation: monShake 0.35s ease; }
+  .pw-error-msg { font-size: 0.8rem; color: var(--danger); margin-bottom: 10px; min-height: 1.1em; }
+  .pw-actions { display: flex; gap: 10px; }
+  .pw-actions .btn-primary { flex: 1; font-size: 1rem; padding: 11px; }
+  .pw-actions .btn-secondary { flex: 1; font-size: 0.95rem; padding: 11px; }
+
+  /* Screen leaderboard (smaller) */
+  .screen-lb { max-height: 240px; overflow-y: auto; }
+  .screen-lb::-webkit-scrollbar { width: 4px; }
+  .screen-lb::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+  /* ── STATS SCREEN ── */
+  .stats .screen-box { border-color: rgba(6,174,213,0.3); box-shadow: 0 0 60px rgba(6,174,213,0.1); }
+  .stats .screen-title { color: var(--blue); }
+
+  /* Screen shake */
+  @keyframes screenShake {
+    0%,100%{transform:translate(0)} 20%{transform:translate(-6px,3px)}
+    40%{transform:translate(6px,-3px)} 60%{transform:translate(-4px,4px)} 80%{transform:translate(4px,-2px)}
+  }
+  body.shake { animation: screenShake 0.35s ease; }
+</style>
+</head>
+<body>
+
+<!-- Animated background bubbles -->
+<div class="bg-bubbles" id="bubbles"></div>
+
+<!-- ── START SCREEN ── -->
+<div class="screen start active" id="startScreen">
+  <div class="screen-box">
+    <span class="screen-icon">🔥</span>
+    <div class="screen-title">Leak Buster!</div>
+    <p class="screen-sub">A FlameGuard challenge — seal the leaks, win a candle 🕯️</p>
+    <div class="name-input-wrap">
+      <input class="name-input" id="playerName" type="text" maxlength="20" placeholder="Enter your name to play…" autocomplete="off"/>
+    </div>
+    <div class="start-rules">
+      <div class="rule"><span class="rule-icon">💨</span> <span>Tap gas leaks before they blow!</span></div>
+      <div class="rule"><span class="rule-icon">🔥</span> <span>Fire hazards cost a life if missed</span></div>
+      <div class="rule"><span class="rule-icon">✨</span> <span>Safety sparks = bonus points</span></div>
+      <div class="rule"><span class="rule-icon">🏆</span> <span>Reach <b>30 pts</b> to win — keep going for a high score!</span></div>
+    </div>
+    <button class="btn-primary" onclick="handleStart()">Let's Go! 🚀</button>
+    <div class="leaderboard" style="margin-top:20px;">
+      <div class="lb-title">🏆 Leaderboard</div>
+      <div id="startLb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS SCREEN ── -->
+<div class="screen stats" id="statsScreen">
+  <div class="screen-box" style="max-width:480px;">
+    <span class="screen-icon">⚡</span>
+    <div class="screen-title">Your Reaction Stats</div>
+    <p class="screen-sub" style="margin-bottom:4px;">How fast are your reflexes, <span id="statsName" style="color:var(--blue);font-weight:800;"></span>?</p>
+    <div id="statsContent"></div>
+    <button class="btn-primary" id="statsNextBtn" style="width:100%;">
+      <span id="statsNextLabel">See Results</span>
+    </button>
+    <button class="btn-secondary" onclick="handleStart()" style="margin-top:10px;width:100%;">Play Again 🔄</button>
+  </div>
+</div>
+
+<!-- ── WIN SCREEN ── -->
+<div class="screen win" id="winScreen">
+  <div class="screen-box">
+    <span class="screen-icon">🕯️</span>
+    <div class="screen-title">You Won!</div>
+    <p class="screen-sub">Amazing, <span id="winName" style="color:var(--gold);font-weight:800;"></span>! You kept the kitchen safe!</p>
+    <div class="win-reward">
+      <p>🎁 Claim your reward at our booth:</p>
+      <p style="font-size:1.4rem;margin:6px 0;">Cute FlameGuard Candle 🕯️</p>
+      <small>Show this screen to our team to collect your prize!</small>
+    </div>
+    <p class="screen-sub" style="margin-bottom:12px;">Final score: <span id="finalScore" style="color:var(--gold);font-weight:800;font-size:1.1rem;"></span></p>
+    <div class="leaderboard screen-lb" style="margin-bottom:16px;">
+      <div class="lb-title">🏆 Leaderboard</div>
+      <div id="winLb"></div>
+    </div>
+    <button class="btn-primary" onclick="handleStart()">Play Again 🔄</button>
+  </div>
+</div>
+
+<!-- ── LOSE SCREEN ── -->
+<div class="screen lose" id="loseScreen">
+  <div class="screen-box">
+    <span class="screen-icon">💥</span>
+    <div class="screen-title">Ka-BOOM!</div>
+    <p class="screen-sub">The kitchen wasn't safe this time, <span id="loseName" style="color:var(--danger);font-weight:800;"></span>. That's why FlameGuard exists! 😄</p>
+    <p class="screen-sub" style="margin:12px 0;">Score: <span id="loseScore" style="color:var(--danger);font-weight:800;font-size:1.1rem;"></span> pts</p>
+    <div class="leaderboard screen-lb" style="margin-bottom:16px;">
+      <div class="lb-title">🏆 Leaderboard</div>
+      <div id="loseLb"></div>
+    </div>
+    <button class="btn-primary" onclick="handleStart()">Try Again 💪</button>
+    <br>
+    <button class="btn-secondary" onclick="showStart()" style="margin-top:10px;">Back to Start</button>
+  </div>
+</div>
+
+<!-- ── GAME UI ── -->
+<div class="wrapper">
+
+  <div class="header">
+    <div class="logo">🔥 FlameGuard</div>
+    <div class="tagline">Leak Buster Challenge</div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score-card sc-score">
+      <div class="sc-label">Score</div>
+      <div class="sc-val" id="scoreDisplay">0</div>
+    </div>
+    <div class="score-card sc-timer">
+      <div class="sc-label">Goal</div>
+      <div class="sc-val">30</div>
+    </div>
+    <div class="score-card sc-lives">
+      <div class="sc-label">Lives</div>
+      <div class="sc-val" id="livesDisplay">❤️❤️❤️</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="combo-bar" id="comboBar">&nbsp;</div>
+
+  <!-- 3×3 GRID -->
+  <div class="grid" id="grid">
+    <!-- holes injected by JS -->
+  </div>
+
+  <div class="instructions">
+    <strong>Tap the gas leaks before they escape!</strong>
+    <div class="emoji-key">
+      <div class="ek">💨 Gas leak — tap it!</div>
+      <div class="ek">🔥 Fire hazard — tap it!</div>
+      <div class="ek">✨ Safety spark — bonus!</div>
+    </div>
+  </div>
+
+  <div class="lb-section">
+    <div class="lb-title">🏆 Leaderboard</div>
+    <div id="gameLb"></div>
+  </div>
+
+</div>
+
+<script>
+  // ── BUBBLES ──
+  const bubblesEl = document.getElementById('bubbles');
+  for (let i = 0; i < 18; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 40 + Math.random() * 120;
+    const colors = ['#FF4D00','#FF8C42','#FFD166','#06AED5','#00D26A'];
+    b.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${8+Math.random()*14}s;animation-delay:${-Math.random()*14}s;`;
+    bubblesEl.appendChild(b);
+  }
+
+  // ── LEADERBOARD (localStorage) ──
+  const LB_KEY = 'flameguard_lb_v1';
+
+  function loadLB() {
+    try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch { return []; }
+  }
+
+  function saveLB(lb) {
+    try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch {}
+  }
+
+  function addToLB(name, score, won) {
+    const lb = loadLB();
+    lb.push({ name: name.trim(), score, won, ts: Date.now() });
+    lb.sort((a, b) => b.score - a.score || b.ts - a.ts);
+    // Keep top 20
+    const trimmed = lb.slice(0, 20);
+    saveLB(trimmed);
+    return trimmed;
+  }
+
+  function renderLB(containerId, highlightName) {
+    const lb = loadLB();
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const showDelete = containerId === 'startLb'; // only on start screen
+    if (!lb.length) { el.innerHTML = '<div class="lb-empty">No scores yet — be the first! 🎮</div>'; return; }
+    const rankSymbols = ['🥇','🥈','🥉'];
+    const rankClasses = ['gold','silver','bronze'];
+    el.innerHTML = lb.map((entry, i) => {
+      const isHighlight = highlightName && entry.name === highlightName && i === lb.findIndex(e => e.name === highlightName && e.score === entry.score);
+      const rankEl = i < 3
+        ? `<span class="lb-rank ${rankClasses[i]}">${rankSymbols[i]}</span>`
+        : `<span class="lb-rank">${i+1}</span>`;
+      const delBtn = showDelete
+        ? `<button class="lb-delete" onclick="openPwModal(${i})" title="Delete entry">✕</button>`
+        : '';
+      return `<div class="lb-row${isHighlight ? ' lb-highlight' : ''}">
+        ${rankEl}
+        <span class="lb-name">${entry.name}</span>
+        <span class="lb-score">${entry.score}<span class="lb-won">${entry.won ? '🕯️' : ''}</span></span>
+        ${delBtn}
+      </div>`;
+    }).join('');
+  }
+
+  // ── PASSWORD & DELETE ──
+  const ADMIN_PASSWORD = 'VIVA LA VIDA';
+  let pendingDeleteIdx = null;
+
+  function openPwModal(idx) {
+    pendingDeleteIdx = idx;
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwError').textContent = '';
+    document.getElementById('pwInput').classList.remove('pw-error');
+    document.getElementById('pwOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('pwInput').focus(), 100);
+  }
+
+  function closePwModal() {
+    pendingDeleteIdx = null;
+    document.getElementById('pwOverlay').classList.remove('active');
+  }
+
+  function confirmDelete() {
+    const entered = document.getElementById('pwInput').value;
+    if (entered !== ADMIN_PASSWORD) {
+      const inp = document.getElementById('pwInput');
+      inp.classList.add('pw-error');
+      document.getElementById('pwError').textContent = '❌ Wrong password. Try again.';
+      inp.value = '';
+      setTimeout(() => inp.classList.remove('pw-error'), 400);
+      inp.focus();
+      return;
+    }
+    // Password correct — delete the entry
+    const lb = loadLB();
+    lb.splice(pendingDeleteIdx, 1);
+    saveLB(lb);
+    closePwModal();
+    renderLB('startLb', '');
+    renderLB('gameLb', currentPlayer);
+  }
+
+  // Allow Enter key in password field
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('pwOverlay').classList.contains('active')) confirmDelete();
+    if (e.key === 'Escape' && document.getElementById('pwOverlay').classList.contains('active')) closePwModal();
+  });
+
+  // ── GAME STATE ──
+  const GOAL      = 30;
+  const MAX_LIVES = 3;
+  const CRITTERS  = ['💨','💨','💨','🔥','✨'];
+  const POINTS    = { '💨': 1, '🔥': 2, '✨': 3 };
+  const DISPLAY_TIME_BASE = 1200;
+  const DISPLAY_MIN       = 550;
+
+  let score = 0, lives = MAX_LIVES, combo = 0;
+  let holes = [], activeTimers = [], spawnTimer = null;
+  let running = false, spawnInterval = 900;
+  let totalPopped = 0;
+  let currentPlayer = '';
+  let reactionTimes = []; // ms per successful tap
+
+  // ── SETUP GRID ──
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < 9; i++) {
+    const hole = document.createElement('div');
+    hole.className = 'hole';
+    hole.dataset.idx = i;
+    hole.innerHTML = '<div class="critter"></div>';
+    hole.addEventListener('click', () => whack(i));
+    grid.appendChild(hole);
+    holes.push({ el: hole, critterEl: hole.querySelector('.critter'), up: false, type: null, timer: null });
+  }
+
+  // ── SCREENS ──
+  function hideAllScreens() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  }
+
+  function showStart() {
+    hideAllScreens();
+    document.getElementById('startScreen').classList.add('active');
+    renderLB('startLb', '');
+  }
+
+  function showWin() {
+    hideAllScreens();
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('winName').textContent = currentPlayer;
+    document.getElementById('winScreen').classList.add('active');
+    renderLB('winLb', currentPlayer);
+    renderLB('gameLb', currentPlayer);
+    confetti();
+  }
+
+  function showLose() {
+    hideAllScreens();
+    document.getElementById('loseScore').textContent = score;
+    document.getElementById('loseName').textContent = currentPlayer;
+    document.getElementById('loseScreen').classList.add('active');
+    renderLB('loseLb', currentPlayer);
+    renderLB('gameLb', currentPlayer);
+  }
+
+  function showStats() {
+    hideAllScreens();
+    const won = score >= GOAL;
+    document.getElementById('statsName').textContent = currentPlayer;
+
+    // Save to leaderboard once here
+    addToLB(currentPlayer, score, won);
+    renderLB('gameLb', currentPlayer);
+
+    // Compute stats
+    const avg = reactionTimes.length
+      ? Math.round(reactionTimes.reduce((a,b)=>a+b,0) / reactionTimes.length)
+      : null;
+    const best = reactionTimes.length ? Math.min(...reactionTimes) : null;
+    const worst = reactionTimes.length ? Math.max(...reactionTimes) : null;
+
+    // FlameGuard system response time for bragging
+    const SYSTEM_MS = 500;
+
+    function ratingLabel(ms) {
+      if (ms < 250) return { label:'Lightning Fast ⚡', color:'#00D26A' };
+      if (ms < 400) return { label:'Quick Reflexes 🔥', color:'#FF8C42' };
+      if (ms < 600) return { label:'Sharp & Ready 👍', color:'#FFD166' };
+      if (ms < 900) return { label:'Pretty Good 😄',   color:'#06AED5' };
+      return               { label:'Keep Practicing 💪', color:'#7a8ca0' };
+    }
+
+    const rating = avg ? ratingLabel(avg) : { label:'No taps recorded', color:'#7a8ca0' };
+    const fasterThanSystem = avg && avg < SYSTEM_MS;
+    const ratio = avg ? (SYSTEM_MS / avg).toFixed(1) : null;
+
+    document.getElementById('statsScreen').classList.add('active');
+
+    document.getElementById('statsContent').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;">
+
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Avg Reaction</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:${rating.color};">${avg ? avg+'ms' : '—'}</div>
+          <div style="font-size:0.75rem;color:${rating.color};font-weight:700;margin-top:4px;">${rating.label}</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Best Tap</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:#00D26A;">${best ? best+'ms' : '—'}</div>
+          <div style="font-size:0.75rem;color:#7a8ca0;margin-top:4px;">Fastest reaction</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Total Taps</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:#FFD166;">${reactionTimes.length}</div>
+          <div style="font-size:0.75rem;color:#7a8ca0;margin-top:4px;">Successful hits</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
+          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Final Score</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:${won?'#FFD166':'#FF3860'};">${score}</div>
+          <div style="font-size:0.75rem;color:${won?'#FFD166':'#7a8ca0'};margin-top:4px;">${won?'Winner 🕯️':'Keep trying 💪'}</div>
+        </div>
+
+      </div>
+
+      <!-- VS FlameGuard System -->
+      <div style="background:linear-gradient(135deg,rgba(255,77,0,0.1),rgba(255,140,66,0.06));border:1px solid rgba(255,77,0,0.3);border-radius:14px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:0.75rem;font-weight:700;color:#FF8C42;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">🔥 You vs FlameGuard System</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="text-align:center;flex:1;">
+            <div style="font-size:0.75rem;color:#7a8ca0;margin-bottom:4px;">Your Avg</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:${rating.color};">${avg ? avg+'ms' : '—'}</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;">⚡</div>
+            <div style="font-size:0.7rem;color:#7a8ca0;">vs</div>
+          </div>
+          <div style="text-align:center;flex:1;">
+            <div style="font-size:0.75rem;color:#7a8ca0;margin-bottom:4px;">FlameGuard</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#FF4D00;">&lt;500ms</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px;font-size:0.85rem;line-height:1.5;color:#E8EAF0;text-align:center;">
+          ${avg
+            ? fasterThanSystem
+              ? `🏆 You reacted in <b>${avg}ms</b> — faster than most! But our PLC still beats you at <b>&lt;500ms guaranteed</b>, 24/7, while you sleep. 😄`
+              : `You reacted in <b>${avg}ms</b>. The FlameGuard PLC reacts in <b>&lt;500ms</b> — that's <b>${ratio}× faster</b> than you, and it never blinks. 🤖`
+            : 'Play more taps to see your reaction time vs our system!'
+          }
+        </div>
+      </div>
+    `;
+
+    document.getElementById('statsNextBtn').onclick = () => { won ? showWin() : showLose(); };
+    document.getElementById('statsNextLabel').textContent = won ? 'Claim Your Candle 🕯️' : 'See Results';
+  }
+
+  // ── HANDLE START (validate name) ──
+  function handleStart() {
+    const nameInput = document.getElementById('playerName');
+    const name = nameInput ? nameInput.value.trim() : currentPlayer;
+    if (!name) {
+      nameInput.style.borderColor = '#FF3860';
+      nameInput.placeholder = 'Please enter your name first! 👆';
+      nameInput.focus();
+      setTimeout(() => { nameInput.style.borderColor = ''; }, 1200);
+      return;
+    }
+    currentPlayer = name;
+    startGame();
+  }
+
+  // ── START GAME ──
+  function startGame() {
+    hideAllScreens();
+    score = 0; lives = MAX_LIVES; combo = 0; totalPopped = 0;
+    spawnInterval = 900; running = true; milestoneShown = false;
+    reactionTimes = [];
+    updateUI();
+    clearAllTimers();
+    resetAllHoles();
+    renderLB('gameLb', currentPlayer);
+    scheduleSpawn();
+  }
+
+  function clearAllTimers() {
+    activeTimers.forEach(t => clearTimeout(t));
+    activeTimers = [];
+    if (spawnTimer) { clearTimeout(spawnTimer); spawnTimer = null; }
+    holes.forEach(h => { if (h.timer) clearTimeout(h.timer); });
+  }
+
+  function resetAllHoles() {
+    holes.forEach(h => {
+      h.el.className = 'hole';
+      h.critterEl.textContent = '';
+      h.up = false; h.type = null; h.timer = null;
+    });
+  }
+
+  // ── SPAWN LOGIC ──
+  function scheduleSpawn() {
+    if (!running) return;
+    spawnTimer = setTimeout(() => {
+      spawnCritter();
+      spawnInterval = Math.max(400, spawnInterval - 18);
+      scheduleSpawn();
+    }, spawnInterval);
+  }
+
+  function spawnCritter() {
+    const empty = holes.filter(h => !h.up);
+    if (!empty.length) return;
+    const h = empty[Math.floor(Math.random() * empty.length)];
+    const type = CRITTERS[Math.floor(Math.random() * CRITTERS.length)];
+    const displayTime = Math.max(DISPLAY_MIN, DISPLAY_TIME_BASE - totalPopped * 18);
+    h.type = type; h.up = true;
+    h.spawnTime = performance.now(); // ← timestamp when critter appears
+    h.critterEl.textContent = type;
+    h.el.className = 'hole up' + (type === '🔥' ? ' danger' : '');
+    h.timer = setTimeout(() => missedCritter(h), displayTime);
+  }
+
+  function missedCritter(h) {
+    if (!h.up || !running) return;
+    const type = h.type;
+    lowerCritter(h);
+    if (type === '💨' || type === '🔥') loseLife(h.el);
+    combo = 0; updateCombo();
+  }
+
+  function lowerCritter(h) {
+    clearTimeout(h.timer);
+    h.up = false; h.type = null;
+    h.el.classList.add('whacked');
+    setTimeout(() => { h.el.className = 'hole'; h.critterEl.textContent = ''; }, 220);
+  }
+
+  // ── WHACK ──
+  function whack(idx) {
+    if (!running) return;
+    const h = holes[idx];
+    if (!h.up) {
+      h.el.classList.add('miss-flash');
+      setTimeout(() => h.el.classList.remove('miss-flash'), 320);
+      return;
+    }
+    const type = h.type;
+    const pts  = POINTS[type] || 0;
+    const rt   = h.spawnTime ? Math.round(performance.now() - h.spawnTime) : null;
+    if (rt !== null) reactionTimes.push(rt);
+    clearTimeout(h.timer);
+    lowerCritter(h);
+    totalPopped++;
+    score += pts; combo++;
+    updateUI();
+    showPopup(h.el, '+' + pts + (combo >= 3 ? '🔥' : ''), combo >= 3 ? '#FFD166' : '#00D26A');
+    h.el.classList.add('hit-flash');
+    setTimeout(() => h.el.classList.remove('hit-flash'), 320);
+    updateCombo();
+    // Hit 30 — show celebration but keep playing!
+    if (score === GOAL) triggerWinMilestone();
+  }
+
+  let milestoneShown = false;
+  function triggerWinMilestone() {
+    if (milestoneShown) return;
+    milestoneShown = true;
+    confetti();
+    // Show a floating banner, not a blocking screen
+    const banner = document.createElement('div');
+    banner.style.cssText = `
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.7);
+      background:linear-gradient(135deg,#1d2d40,#162030);
+      border:2px solid rgba(255,209,102,0.5);
+      border-radius:20px; padding:20px 32px; z-index:80;
+      text-align:center; box-shadow:0 0 60px rgba(255,209,102,0.2);
+      animation:milestoneIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    `;
+    banner.innerHTML = `
+      <div style="font-size:2.5rem;">🕯️</div>
+      <div style="font-family:'Fredoka One',cursive;font-size:1.6rem;color:#FFD166;margin:6px 0;">You Won!</div>
+      <div style="font-size:0.9rem;color:#7a8ca0;">30 pts reached — candle is yours!<br><b style="color:#F0F4FF;">Keep going for a higher score!</b></div>
+    `;
+    document.body.appendChild(banner);
+    const styleEl = document.createElement('style');
+    styleEl.textContent = '@keyframes milestoneIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.7)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}';
+    document.head.appendChild(styleEl);
+    setTimeout(() => {
+      banner.style.transition = 'opacity 0.5s, transform 0.5s';
+      banner.style.opacity = '0';
+      banner.style.transform = 'translate(-50%,-50%) scale(0.85)';
+      setTimeout(() => banner.remove(), 500);
+    }, 2200);
+  }
+
+  // ── LOSE LIFE ──
+  function loseLife(el) {
+    lives = Math.max(0, lives - 1);
+    updateUI();
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 360);
+    showPopup(el, '-1 ❤️', '#FF3860');
+    if (lives <= 0) endGame();
+  }
+
+  // ── END GAME (only triggered on lives = 0) ──
+  function endGame() {
+    running = false;
+    clearAllTimers();
+    resetAllHoles();
+    setTimeout(() => showStats(), 500);
+  }
+
+  // ── UI UPDATE ──
+  function updateUI() {
+    document.getElementById('scoreDisplay').textContent = score;
+    const pct = Math.min(100, (score / GOAL) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+    // Bar turns gold once goal is reached
+    document.getElementById('progressBar').style.background = score >= GOAL
+      ? 'linear-gradient(90deg,#FFD166,#FF8C42)'
+      : 'linear-gradient(90deg,var(--flame),var(--gold))';
+    const hearts = '❤️'.repeat(lives) + '🖤'.repeat(MAX_LIVES - lives);
+    document.getElementById('livesDisplay').textContent = hearts;
+  }
+
+  function updateCombo() {
+    const cb = document.getElementById('comboBar');
+    if (combo >= 5)      cb.textContent = '🔥🔥🔥 COMBO x' + combo + ' — ON FIRE!';
+    else if (combo >= 3) cb.textContent = '⚡ Combo x' + combo + ' — Keep going!';
+    else if (combo >= 2) cb.textContent = '✨ Combo x' + combo;
+    else                 cb.textContent = '\u00a0';
+  }
+
+  // ── FLOATING POPUP ──
+  function showPopup(refEl, text, color) {
+    const rect = refEl.getBoundingClientRect();
+    const p = document.createElement('div');
+    p.className = 'popup';
+    p.textContent = text;
+    p.style.cssText = `color:${color};left:${rect.left + rect.width/2 - 30}px;top:${rect.top}px;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 820);
+  }
+
+  // ── CONFETTI ──
+  function confetti() {
+    const colors = ['#FF4D00','#FFD166','#00D26A','#06AED5','#FF8C42','#ffffff'];
+    for (let i = 0; i < 80; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      const size = 6 + Math.random() * 12;
+      c.style.cssText = `left:${Math.random()*100}vw;width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>0.5?'50%':'2px'};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*0.6}s;`;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3500);
+    }
+  }
+
+  // ── INIT ──
+  showStart();
+
+  // Allow pressing Enter on name input
+  document.getElementById('playerName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleStart();
+  });
+</script>
+<!-- ── PASSWORD MODAL ── -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <div class="pw-icon">🔐</div>
+    <div class="pw-title">Admin Access</div>
+    <div class="pw-sub">Enter the password to delete this entry</div>
+    <input class="pw-input" id="pwInput" type="password" placeholder="Password" autocomplete="off"/>
+    <div class="pw-error-msg" id="pwError"></div>
+    <div class="pw-actions">
+      <button class="btn-secondary" onclick="closePwModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmDelete()" style="background:var(--danger);box-shadow:0 4px 16px rgba(255,56,96,0.3);">Delete</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
