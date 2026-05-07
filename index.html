@@ -551,42 +551,63 @@
     bubblesEl.appendChild(b);
   }
 
-  // ── LEADERBOARD (localStorage) ──
-  const LB_KEY = 'flameguard_lb_v1';
+  // ── SUPABASE CONFIG ──
+  const SB_URL = 'https://uappkmpykabddlvsuwho.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhcHBrbXB5a2FiZGRsdnN1d2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxODIzNDQsImV4cCI6MjA5Mzc1ODM0NH0.IASVHs1KXnKHUpioSIsXe6hphzU9jLfVFK19r0-BnJ4';
+  const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
 
-  function loadLB() {
-    try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch { return []; }
+  // In-memory cache so UI stays snappy
+  let lbCache = [];
+
+  async function fetchLB() {
+    try {
+      const res = await fetch(`${SB_URL}/rest/v1/leaderboard?select=*&order=score.desc,created_at.asc&limit=20`, { headers: SB_HEADERS });
+      if (!res.ok) throw new Error();
+      lbCache = await res.json();
+    } catch { /* keep cache */ }
+    return lbCache;
   }
 
-  function saveLB(lb) {
-    try { localStorage.setItem(LB_KEY, JSON.stringify(lb)); } catch {}
+  async function addToLB(name, score, won) {
+    try {
+      await fetch(`${SB_URL}/rest/v1/leaderboard`, {
+        method: 'POST',
+        headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ name: name.trim(), score, won })
+      });
+    } catch {}
+    await fetchLB();
   }
 
-  function addToLB(name, score, won) {
-    const lb = loadLB();
-    lb.push({ name: name.trim(), score, won, ts: Date.now() });
-    lb.sort((a, b) => b.score - a.score || b.ts - a.ts);
-    // Keep top 20
-    const trimmed = lb.slice(0, 20);
-    saveLB(trimmed);
-    return trimmed;
+  async function deleteFromLB(id) {
+    try {
+      await fetch(`${SB_URL}/rest/v1/leaderboard?id=eq.${id}`, {
+        method: 'DELETE', headers: SB_HEADERS
+      });
+    } catch {}
+    await fetchLB();
   }
 
-  function renderLB(containerId, highlightName) {
-    const lb = loadLB();
+  async function renderLB(containerId, highlightName) {
     const el = document.getElementById(containerId);
     if (!el) return;
-    const showDelete = containerId === 'startLb'; // only on start screen
+    const showDelete = containerId === 'startLb';
+
+    // Show spinner while loading
+    if (!lbCache.length) el.innerHTML = '<div class="lb-empty" style="color:#7a8ca0;">Loading leaderboard… ⏳</div>';
+
+    const lb = await fetchLB();
+
     if (!lb.length) { el.innerHTML = '<div class="lb-empty">No scores yet — be the first! 🎮</div>'; return; }
     const rankSymbols = ['🥇','🥈','🥉'];
     const rankClasses = ['gold','silver','bronze'];
     el.innerHTML = lb.map((entry, i) => {
-      const isHighlight = highlightName && entry.name === highlightName && i === lb.findIndex(e => e.name === highlightName && e.score === entry.score);
+      const isHighlight = highlightName && entry.name === highlightName;
       const rankEl = i < 3
         ? `<span class="lb-rank ${rankClasses[i]}">${rankSymbols[i]}</span>`
         : `<span class="lb-rank">${i+1}</span>`;
       const delBtn = showDelete
-        ? `<button class="lb-delete" onclick="openPwModal(${i})" title="Delete entry">✕</button>`
+        ? `<button class="lb-delete" onclick="openPwModal('${entry.id}')" title="Delete entry">✕</button>`
         : '';
       return `<div class="lb-row${isHighlight ? ' lb-highlight' : ''}">
         ${rankEl}
@@ -599,10 +620,10 @@
 
   // ── PASSWORD & DELETE ──
   const ADMIN_PASSWORD = 'VIVA LA VIDA';
-  let pendingDeleteIdx = null;
+  let pendingDeleteId = null;
 
-  function openPwModal(idx) {
-    pendingDeleteIdx = idx;
+  function openPwModal(id) {
+    pendingDeleteId = id;
     document.getElementById('pwInput').value = '';
     document.getElementById('pwError').textContent = '';
     document.getElementById('pwInput').classList.remove('pw-error');
@@ -611,11 +632,11 @@
   }
 
   function closePwModal() {
-    pendingDeleteIdx = null;
+    pendingDeleteId = null;
     document.getElementById('pwOverlay').classList.remove('active');
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     const entered = document.getElementById('pwInput').value;
     if (entered !== ADMIN_PASSWORD) {
       const inp = document.getElementById('pwInput');
@@ -626,11 +647,8 @@
       inp.focus();
       return;
     }
-    // Password correct — delete the entry
-    const lb = loadLB();
-    lb.splice(pendingDeleteIdx, 1);
-    saveLB(lb);
     closePwModal();
+    await deleteFromLB(pendingDeleteId);
     renderLB('startLb', '');
     renderLB('gameLb', currentPlayer);
   }
@@ -673,7 +691,7 @@
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   }
 
-  function showStart() {
+  async function showStart() {
     hideAllScreens();
     document.getElementById('startScreen').classList.add('active');
     renderLB('startLb', '');
@@ -698,13 +716,15 @@
     renderLB('gameLb', currentPlayer);
   }
 
-  function showStats() {
+  async function showStats() {
     hideAllScreens();
     const won = score >= GOAL;
     document.getElementById('statsName').textContent = currentPlayer;
+    document.getElementById('statsScreen').classList.add('active');
+    document.getElementById('statsContent').innerHTML = '<div class="lb-empty" style="padding:20px 0;">Saving your score… ⏳</div>';
 
-    // Save to leaderboard once here
-    addToLB(currentPlayer, score, won);
+    // Save to Supabase first, then render everything
+    await addToLB(currentPlayer, score, won);
     renderLB('gameLb', currentPlayer);
 
     // Compute stats
