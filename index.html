@@ -551,40 +551,47 @@
     bubblesEl.appendChild(b);
   }
 
-  // ── SUPABASE CONFIG ──
-  const SB_URL = 'https://uappkmpykabddlvsuwho.supabase.co';
-  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhcHBrbXB5a2FiZGRsdnN1d2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxODIzNDQsImV4cCI6MjA5Mzc1ODM0NH0.IASVHs1KXnKHUpioSIsXe6hphzU9jLfVFK19r0-BnJ4';
-  const SB_HEADERS = { 'Content-Type': 'application/json', 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+  // ── GOOGLE SHEETS LEADERBOARD ──
+  const GS_URL = 'https://script.google.com/macros/s/AKfycby07oIoiFLNxEOQpvYg0oBOl5RrXX6GvS2kdRChM_jVXYM_gSA9S7R44N_cfMVik2oSsQ/exec';
 
-  // In-memory cache so UI stays snappy
   let lbCache = [];
 
   async function fetchLB() {
     try {
-      const res = await fetch(`${SB_URL}/rest/v1/leaderboard?select=*&order=score.desc,created_at.asc&limit=20`, { headers: SB_HEADERS });
+      const res = await fetch(GS_URL);
       if (!res.ok) throw new Error();
       lbCache = await res.json();
-    } catch { /* keep cache */ }
+      localStorage.setItem('fg_lb_cache', JSON.stringify(lbCache));
+    } catch {
+      try { lbCache = JSON.parse(localStorage.getItem('fg_lb_cache')) || []; } catch { lbCache = []; }
+    }
     return lbCache;
   }
 
   async function addToLB(name, score, won) {
     try {
-      await fetch(`${SB_URL}/rest/v1/leaderboard`, {
+      await fetch(GS_URL, {
         method: 'POST',
-        headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), score, won })
       });
     } catch {}
+    // Wait a moment then refresh
+    await new Promise(r => setTimeout(r, 1200));
     await fetchLB();
   }
 
-  async function deleteFromLB(id) {
+  async function deleteFromLB(row) {
     try {
-      await fetch(`${SB_URL}/rest/v1/leaderboard?id=eq.${id}`, {
-        method: 'DELETE', headers: SB_HEADERS
+      await fetch(GS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', row: row })
       });
     } catch {}
+    await new Promise(r => setTimeout(r, 1200));
     await fetchLB();
   }
 
@@ -593,8 +600,7 @@
     if (!el) return;
     const showDelete = containerId === 'startLb';
 
-    // Show spinner while loading
-    if (!lbCache.length) el.innerHTML = '<div class="lb-empty" style="color:#7a8ca0;">Loading leaderboard… ⏳</div>';
+    if (!lbCache.length) el.innerHTML = '<div class="lb-empty" style="color:#7a8ca0;">Loading… ⏳</div>';
 
     const lb = await fetchLB();
 
@@ -607,7 +613,7 @@
         ? `<span class="lb-rank ${rankClasses[i]}">${rankSymbols[i]}</span>`
         : `<span class="lb-rank">${i+1}</span>`;
       const delBtn = showDelete
-        ? `<button class="lb-delete" onclick="openPwModal('${entry.id}')" title="Delete entry">✕</button>`
+        ? `<button class="lb-delete" onclick="openPwModal(${entry.row})" title="Delete entry">✕</button>`
         : '';
       return `<div class="lb-row${isHighlight ? ' lb-highlight' : ''}">
         ${rankEl}
@@ -622,8 +628,8 @@
   const ADMIN_PASSWORD = 'VIVA LA VIDA';
   let pendingDeleteId = null;
 
-  function openPwModal(id) {
-    pendingDeleteId = id;
+  function openPwModal(key) {
+    pendingDeleteId = key;
     document.getElementById('pwInput').value = '';
     document.getElementById('pwError').textContent = '';
     document.getElementById('pwInput').classList.remove('pw-error');
@@ -653,7 +659,6 @@
     renderLB('gameLb', currentPlayer);
   }
 
-  // Allow Enter key in password field
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && document.getElementById('pwOverlay').classList.contains('active')) confirmDelete();
     if (e.key === 'Escape' && document.getElementById('pwOverlay').classList.contains('active')) closePwModal();
