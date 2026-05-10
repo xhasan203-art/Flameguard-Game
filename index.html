@@ -24,13 +24,17 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html { height: 100%; }
+
   body {
     font-family: 'Nunito', sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    min-height: 100%;
     overflow-x: hidden;
     position: relative;
+    /* Prevent double-tap zoom on mobile */
+    touch-action: manipulation;
   }
 
   /* Animated background bubbles */
@@ -49,9 +53,9 @@
   /* ── WRAPPER ── */
   .wrapper {
     position: relative; z-index: 1;
-    max-width: 720px; margin: 0 auto;
-    padding: 24px 16px 60px;
-    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    max-width: 500px; margin: 0 auto;
+    padding: 12px 12px 40px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
 
   /* ── HEADER ── */
@@ -67,7 +71,7 @@
 
   .logo {
     font-family: 'Fredoka One', cursive;
-    font-size: clamp(2rem, 8vw, 3.2rem);
+    font-size: clamp(1.5rem, 6vw, 2.4rem);
     letter-spacing: 0.02em;
     background: linear-gradient(135deg, var(--flame), var(--gold));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -76,32 +80,31 @@
   }
 
   .tagline {
-    font-size: 1rem; color: var(--muted); font-weight: 600; margin-top: 4px;
+    font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-top: 2px;
   }
 
   /* ── SCOREBOARD ── */
   .scoreboard {
-    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
-    width: 100%;
+    display: flex; gap: 8px; width: 100%;
     animation: dropIn 0.6s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
   }
 
   .score-card {
     background: var(--card);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px; padding: 12px 20px;
-    text-align: center; flex: 1; min-width: 100px;
+    border-radius: 12px; padding: 8px 10px;
+    text-align: center; flex: 1;
   }
 
-  .score-card .sc-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-  .score-card .sc-val   { font-family: 'Fredoka One', cursive; font-size: 2rem; line-height: 1.1; }
+  .score-card .sc-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .score-card .sc-val   { font-family: 'Fredoka One', cursive; font-size: 1.5rem; line-height: 1.1; }
   .score-card.sc-score  .sc-val { color: var(--gold); }
-  .score-card.sc-lives  .sc-val { color: var(--danger); }
+  .score-card.sc-lives  .sc-val { color: var(--danger); font-size: 1rem; }
   .score-card.sc-timer  .sc-val { color: var(--blue); }
 
   /* ── PROGRESS BAR ── */
   .progress-wrap {
-    width: 100%; background: var(--card); border-radius: 100px; height: 10px;
+    width: 100%; background: var(--card); border-radius: 100px; height: 8px;
     border: 1px solid rgba(255,255,255,0.07);
   }
   .progress-bar {
@@ -115,8 +118,10 @@
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
+    gap: clamp(8px, 2.5vw, 14px);
     width: 100%;
+    /* Limit grid size so it fits on small screens without scrolling */
+    max-width: min(100%, 420px);
     animation: dropIn 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
   }
 
@@ -129,19 +134,23 @@
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    /* Bigger tap target feel */
     box-shadow: inset 0 8px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
     transition: box-shadow 0.15s;
     display: flex; align-items: center; justify-content: center;
+    /* Prevent iOS callout on long press */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
   }
 
-  .hole:active { box-shadow: inset 0 8px 24px rgba(0,0,0,0.8); }
+  .hole:active { box-shadow: inset 0 8px 24px rgba(0,0,0,0.8); transform: scale(0.96); }
 
   /* The character inside the hole */
   .critter {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, 160%);
-    font-size: clamp(2.2rem, 8vw, 3.4rem);
+    font-size: clamp(1.8rem, 7vw, 3rem);
     transition: transform 0.18s cubic-bezier(0.34,1.2,0.64,1);
     user-select: none; pointer-events: none;
     filter: drop-shadow(0 -4px 8px rgba(0,0,0,0.5));
@@ -159,18 +168,14 @@
   }
 
   /* Hit flash */
-  .hole.hit-flash {
-    animation: hitFlash 0.3s ease;
-  }
+  .hole.hit-flash { animation: hitFlash 0.3s ease; }
   @keyframes hitFlash {
     0%  { background: radial-gradient(ellipse at 50% 70%, rgba(0,210,106,0.4) 60%, var(--hole-rim) 100%); }
     100%{ background: radial-gradient(ellipse at 50% 70%, var(--hole-bg) 60%, var(--hole-rim) 100%); }
   }
 
   /* Miss flash */
-  .hole.miss-flash {
-    animation: missFlash 0.3s ease;
-  }
+  .hole.miss-flash { animation: missFlash 0.3s ease; }
   @keyframes missFlash {
     0%  { background: radial-gradient(ellipse at 50% 70%, rgba(255,56,96,0.4) 60%, var(--hole-rim) 100%); }
     100%{ background: radial-gradient(ellipse at 50% 70%, var(--hole-bg) 60%, var(--hole-rim) 100%); }
@@ -180,79 +185,90 @@
   .popup {
     position: fixed; pointer-events: none; z-index: 50;
     font-family: 'Fredoka One', cursive;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     animation: popFloat 0.8s ease forwards;
   }
   @keyframes popFloat {
     0%   { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+    100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
   }
 
   /* ── INSTRUCTIONS ── */
   .instructions {
     background: var(--card);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px; padding: 16px 20px;
-    font-size: 0.88rem; color: var(--muted); line-height: 1.7;
+    border-radius: 12px; padding: 10px 14px;
+    font-size: 0.78rem; color: var(--muted); line-height: 1.5;
     text-align: center; width: 100%;
   }
 
   .instructions strong { color: var(--text); }
-  .instructions .emoji-key { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
-  .instructions .ek { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+  .instructions .emoji-key { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+  .instructions .ek { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; }
 
   /* ── BUTTONS ── */
   .btn-primary {
     font-family: 'Fredoka One', cursive;
-    font-size: 1.3rem; letter-spacing: 0.04em;
+    font-size: 1.15rem; letter-spacing: 0.04em;
     background: linear-gradient(135deg, var(--flame), var(--flame2));
     color: #fff; border: none; border-radius: 50px;
-    padding: 14px 40px; cursor: pointer;
+    padding: 13px 36px; cursor: pointer;
     box-shadow: 0 6px 24px rgba(255,77,0,0.4);
     transition: transform 0.15s, box-shadow 0.15s;
+    width: 100%;
+    /* Good tap target */
+    min-height: 48px;
   }
-  .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(255,77,0,0.55); }
-  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:active { transform: scale(0.97); box-shadow: 0 3px 12px rgba(255,77,0,0.3); }
 
   .btn-secondary {
     font-family: 'Fredoka One', cursive;
-    font-size: 1rem; letter-spacing: 0.03em;
+    font-size: 0.95rem; letter-spacing: 0.03em;
     background: transparent; color: var(--muted);
     border: 1px solid rgba(255,255,255,0.15); border-radius: 50px;
-    padding: 10px 28px; cursor: pointer;
+    padding: 10px 24px; cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
+    width: 100%; min-height: 44px;
   }
-  .btn-secondary:hover { border-color: var(--flame); color: var(--flame2); }
+  .btn-secondary:active { border-color: var(--flame); color: var(--flame2); }
 
   /* ── OVERLAY SCREENS ── */
   .screen {
     display: none;
     position: fixed; inset: 0; z-index: 100;
-    background: rgba(10,18,28,0.92);
+    background: rgba(10,18,28,0.95);
     backdrop-filter: blur(10px);
-    align-items: center; justify-content: center;
-    flex-direction: column; gap: 20px;
-    text-align: center; padding: 24px;
+    /* Scrollable screen overlay for small phones */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 12px 32px;
   }
 
-  .screen.active { display: flex; }
+  .screen.active { display: block; }
+
+  .screen-inner {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    min-height: 100%;
+    padding-top: 12px;
+  }
 
   .screen-box {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 28px; padding: 36px 32px;
+    border-radius: 24px; padding: 24px 20px;
     max-width: 420px; width: 100%;
     animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
   }
 
   @keyframes popIn {
-    from { transform: scale(0.7); opacity: 0; }
+    from { transform: scale(0.85); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
   }
 
-  .screen-icon { font-size: 4.5rem; margin-bottom: 8px; display: block; }
-  .screen-title { font-family: 'Fredoka One', cursive; font-size: 2.2rem; line-height: 1.1; margin-bottom: 10px; }
-  .screen-sub { font-size: 0.95rem; color: var(--muted); line-height: 1.6; }
+  .screen-icon { font-size: 3.5rem; margin-bottom: 6px; display: block; }
+  .screen-title { font-family: 'Fredoka One', cursive; font-size: 1.9rem; line-height: 1.1; margin-bottom: 8px; }
+  .screen-sub { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
 
   /* WIN screen */
   .win .screen-title { color: var(--gold); }
@@ -261,10 +277,10 @@
   .win-reward {
     background: linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,77,0,0.08));
     border: 1px solid rgba(255,209,102,0.3);
-    border-radius: 16px; padding: 16px 20px; margin: 16px 0;
+    border-radius: 14px; padding: 12px 16px; margin: 12px 0;
   }
-  .win-reward p { font-size: 1rem; font-weight: 700; color: var(--gold); }
-  .win-reward small { font-size: 0.82rem; color: var(--muted); }
+  .win-reward p { font-size: 0.95rem; font-weight: 700; color: var(--gold); }
+  .win-reward small { font-size: 0.78rem; color: var(--muted); }
 
   /* LOSE screen */
   .lose .screen-title { color: var(--danger); }
@@ -274,9 +290,9 @@
   .start .screen-title { color: var(--flame2); }
   .start .screen-box { border-color: rgba(255,77,0,0.25); }
 
-  .start-rules { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; text-align: left; }
-  .rule { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text); }
-  .rule-icon { font-size: 1.3rem; flex-shrink: 0; }
+  .start-rules { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; text-align: left; }
+  .rule { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--text); }
+  .rule-icon { font-size: 1.1rem; flex-shrink: 0; }
 
   /* ── CONFETTI ── */
   .confetti-piece {
@@ -292,112 +308,119 @@
   /* ── COMBO INDICATOR ── */
   .combo-bar {
     font-family: 'Fredoka One', cursive;
-    font-size: 1.1rem; color: var(--gold);
-    min-height: 1.6rem; text-align: center;
-    transition: opacity 0.3s;
+    font-size: 0.95rem; color: var(--gold);
+    min-height: 1.4rem; text-align: center;
     text-shadow: 0 0 12px rgba(255,209,102,0.6);
   }
 
   /* ── NAME ENTRY ── */
   .name-input-wrap {
-    display: flex; flex-direction: column; gap: 10px; margin: 16px 0;
+    display: flex; flex-direction: column; gap: 10px; margin: 12px 0;
   }
   .name-input {
     background: rgba(255,255,255,0.07);
     border: 1.5px solid rgba(255,255,255,0.15);
-    border-radius: 12px; padding: 12px 16px;
+    border-radius: 12px; padding: 14px 16px;
     color: var(--text); font-family: 'Nunito', sans-serif;
-    font-size: 1.1rem; font-weight: 700;
+    font-size: 1rem; font-weight: 700;
     outline: none; text-align: center; width: 100%;
     transition: border-color 0.2s;
+    /* Good mobile tap target */
+    min-height: 48px;
   }
   .name-input:focus { border-color: var(--flame); }
   .name-input::placeholder { color: var(--muted); font-weight: 400; }
 
   /* ── LEADERBOARD ── */
-  .leaderboard {
-    width: 100%; margin-top: 6px;
-  }
+  .leaderboard { width: 100%; margin-top: 8px; }
   .lb-title {
     font-family: 'Fredoka One', cursive;
-    font-size: 1rem; color: var(--gold);
-    margin-bottom: 10px; letter-spacing: 0.04em;
+    font-size: 0.95rem; color: var(--gold);
+    margin-bottom: 8px; letter-spacing: 0.04em;
     display: flex; align-items: center; gap: 6px;
   }
-  .lb-empty { font-size: 0.85rem; color: var(--muted); text-align: center; padding: 12px 0; }
+  .lb-empty { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 10px 0; }
   .lb-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: 10px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-radius: 10px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.07);
-    margin-bottom: 6px;
-    transition: background 0.3s;
+    margin-bottom: 5px;
   }
   .lb-row.lb-highlight { background: rgba(255,209,102,0.1); border-color: rgba(255,209,102,0.3); }
-  .lb-rank { font-family: 'Fredoka One', cursive; font-size: 1rem; color: var(--muted); width: 24px; text-align: center; flex-shrink: 0; }
+  .lb-rank { font-family: 'Fredoka One', cursive; font-size: 0.95rem; color: var(--muted); width: 22px; text-align: center; flex-shrink: 0; }
   .lb-rank.gold   { color: #FFD166; }
   .lb-rank.silver { color: #C0C0C0; }
   .lb-rank.bronze { color: #CD7F32; }
-  .lb-name { flex: 1; font-weight: 700; font-size: 0.92rem; color: var(--text); }
-  .lb-score { font-family: 'Fredoka One', cursive; font-size: 1.1rem; color: var(--gold); }
-  .lb-won { font-size: 0.75rem; margin-left: 4px; }
+  .lb-name { flex: 1; font-weight: 700; font-size: 0.88rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lb-score { font-family: 'Fredoka One', cursive; font-size: 1rem; color: var(--gold); flex-shrink: 0; }
+  .lb-won { font-size: 0.7rem; margin-left: 2px; }
+
+  /* Scrollable leaderboard containers */
+  .lb-scroll {
+    max-height: 220px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+  }
+  .lb-scroll::-webkit-scrollbar { width: 3px; }
+  .lb-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
   /* Leaderboard section in game UI */
   .lb-section {
     width: 100%;
     background: var(--card);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px; padding: 16px 18px;
+    border-radius: 14px; padding: 12px 14px;
   }
 
   /* Delete button on lb rows */
   .lb-delete {
     background: none; border: none; cursor: pointer;
-    font-size: 0.85rem; color: rgba(255,56,96,0.4);
-    padding: 2px 5px; border-radius: 6px;
+    font-size: 0.9rem; color: rgba(255,56,96,0.4);
+    padding: 4px 6px; border-radius: 6px;
     transition: color 0.2s, background 0.2s;
     flex-shrink: 0; line-height: 1;
+    /* Good tap target */
+    min-width: 28px; min-height: 28px;
+    display: flex; align-items: center; justify-content: center;
   }
-  .lb-delete:hover { color: #FF3860; background: rgba(255,56,96,0.1); }
+  .lb-delete:active { color: #FF3860; background: rgba(255,56,96,0.1); }
 
   /* Password modal */
   .pw-overlay {
     display: none; position: fixed; inset: 0; z-index: 300;
-    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; padding: 16px;
   }
   .pw-overlay.active { display: flex; }
   .pw-box {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px; padding: 28px 28px 22px;
-    width: min(380px, 92vw); text-align: center;
+    border-radius: 20px; padding: 24px 20px;
+    width: 100%; max-width: 360px; text-align: center;
     animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
   }
-  .pw-icon { font-size: 2.5rem; margin-bottom: 8px; }
-  .pw-title { font-family:'Fredoka One',cursive; font-size: 1.4rem; color: var(--text); margin-bottom: 6px; }
-  .pw-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; }
+  .pw-icon { font-size: 2rem; margin-bottom: 6px; }
+  .pw-title { font-family:'Fredoka One',cursive; font-size: 1.3rem; color: var(--text); margin-bottom: 4px; }
+  .pw-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 14px; }
   .pw-input {
     width: 100%; background: rgba(255,255,255,0.06);
     border: 1.5px solid rgba(255,255,255,0.15);
-    border-radius: 10px; padding: 11px 14px;
+    border-radius: 10px; padding: 13px 14px;
     color: var(--text); font-family: 'Nunito', sans-serif;
     font-size: 1rem; font-weight: 700; text-align: center;
     outline: none; letter-spacing: 0.06em;
-    transition: border-color 0.2s;
-    margin-bottom: 12px;
+    transition: border-color 0.2s; margin-bottom: 10px;
+    min-height: 48px;
   }
   .pw-input:focus { border-color: var(--flame); }
-  .pw-input.pw-error { border-color: var(--danger); animation: monShake 0.35s ease; }
-  .pw-error-msg { font-size: 0.8rem; color: var(--danger); margin-bottom: 10px; min-height: 1.1em; }
-  .pw-actions { display: flex; gap: 10px; }
-  .pw-actions .btn-primary { flex: 1; font-size: 1rem; padding: 11px; }
-  .pw-actions .btn-secondary { flex: 1; font-size: 0.95rem; padding: 11px; }
-
-  /* Screen leaderboard (smaller) */
-  .screen-lb { max-height: 240px; overflow-y: auto; }
-  .screen-lb::-webkit-scrollbar { width: 4px; }
-  .screen-lb::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .pw-input.pw-error { border-color: var(--danger); }
+  .pw-error-msg { font-size: 0.78rem; color: var(--danger); margin-bottom: 10px; min-height: 1em; }
+  .pw-actions { display: flex; gap: 8px; }
+  .pw-actions .btn-primary { flex: 1; font-size: 0.95rem; padding: 11px; }
+  .pw-actions .btn-secondary { flex: 1; font-size: 0.9rem; padding: 11px; }
 
   /* ── STATS SCREEN ── */
   .stats .screen-box { border-color: rgba(6,174,213,0.3); box-shadow: 0 0 60px rgba(6,174,213,0.1); }
@@ -405,10 +428,22 @@
 
   /* Screen shake */
   @keyframes screenShake {
-    0%,100%{transform:translate(0)} 20%{transform:translate(-6px,3px)}
-    40%{transform:translate(6px,-3px)} 60%{transform:translate(-4px,4px)} 80%{transform:translate(4px,-2px)}
+    0%,100%{transform:translate(0)} 20%{transform:translate(-5px,2px)}
+    40%{transform:translate(5px,-2px)} 60%{transform:translate(-3px,3px)} 80%{transform:translate(3px,-1px)}
   }
-  body.shake { animation: screenShake 0.35s ease; }
+  body.shake { animation: screenShake 0.3s ease; }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0;
+  }
+  .stat-box {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 12px 8px; text-align: center;
+  }
+  .stat-box-label { font-size: 0.62rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .stat-box-val { font-family: 'Fredoka One', cursive; font-size: 1.6rem; line-height: 1; }
+  .stat-box-sub { font-size: 0.7rem; margin-top: 4px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -418,6 +453,7 @@
 
 <!-- ── START SCREEN ── -->
 <div class="screen start active" id="startScreen">
+  <div class="screen-inner">
   <div class="screen-box">
     <span class="screen-icon">🔥</span>
     <div class="screen-title">Leak Buster!</div>
@@ -432,60 +468,68 @@
       <div class="rule"><span class="rule-icon">🏆</span> <span>Reach <b>30 pts</b> to win — keep going for a high score!</span></div>
     </div>
     <button class="btn-primary" onclick="handleStart()">Let's Go! 🚀</button>
-    <div class="leaderboard" style="margin-top:20px;">
+    <div class="leaderboard" style="margin-top:16px;">
       <div class="lb-title">🏆 Leaderboard</div>
-      <div id="startLb"></div>
+      <div class="lb-scroll" id="startLb"></div>
     </div>
+  </div>
   </div>
 </div>
 
 <!-- ── STATS SCREEN ── -->
 <div class="screen stats" id="statsScreen">
+  <div class="screen-inner">
   <div class="screen-box" style="max-width:480px;">
     <span class="screen-icon">⚡</span>
-    <div class="screen-title">Your Reaction Stats</div>
-    <p class="screen-sub" style="margin-bottom:4px;">How fast are your reflexes, <span id="statsName" style="color:var(--blue);font-weight:800;"></span>?</p>
+    <div class="screen-title">Your Stats</div>
+    <p class="screen-sub" style="margin-bottom:4px;">How fast are you, <span id="statsName" style="color:var(--blue);font-weight:800;"></span>?</p>
     <div id="statsContent"></div>
-    <button class="btn-primary" id="statsNextBtn" style="width:100%;">
+    <button class="btn-primary" id="statsNextBtn" style="margin-top:8px;">
       <span id="statsNextLabel">See Results</span>
     </button>
-    <button class="btn-secondary" onclick="handleStart()" style="margin-top:10px;width:100%;">Play Again 🔄</button>
+    <button class="btn-secondary" onclick="handleStart()" style="margin-top:8px;">Play Again 🔄</button>
+  </div>
   </div>
 </div>
 
 <!-- ── WIN SCREEN ── -->
 <div class="screen win" id="winScreen">
+  <div class="screen-inner">
   <div class="screen-box">
     <span class="screen-icon">🕯️</span>
     <div class="screen-title">You Won!</div>
     <p class="screen-sub">Amazing, <span id="winName" style="color:var(--gold);font-weight:800;"></span>! You kept the kitchen safe!</p>
     <div class="win-reward">
       <p>🎁 Claim your reward at our booth:</p>
-      <p style="font-size:1.4rem;margin:6px 0;">Cute FlameGuard Candle 🕯️</p>
+      <p style="font-size:1.2rem;margin:6px 0;">Cute FlameGuard Candle 🕯️</p>
       <small>Show this screen to our team to collect your prize!</small>
     </div>
-    <p class="screen-sub" style="margin-bottom:12px;">Final score: <span id="finalScore" style="color:var(--gold);font-weight:800;font-size:1.1rem;"></span></p>
-    <div class="leaderboard screen-lb" style="margin-bottom:16px;">
+    <p class="screen-sub" style="margin-bottom:10px;">Final score: <span id="finalScore" style="color:var(--gold);font-weight:800;font-size:1.1rem;"></span></p>
+    <div class="leaderboard" style="margin-bottom:12px;">
       <div class="lb-title">🏆 Leaderboard</div>
-      <div id="winLb"></div>
+      <div class="lb-scroll" id="winLb"></div>
     </div>
     <button class="btn-primary" onclick="handleStart()">Play Again 🔄</button>
-    <button class="btn-secondary" onclick="showStart()" style="margin-top:10px;width:100%;">Return to Menu 🏠</button>
+    <button class="btn-secondary" onclick="showStart()" style="margin-top:8px;">Return to Menu 🏠</button>
+  </div>
   </div>
 </div>
+
+<!-- ── LOSE SCREEN ── -->
 <div class="screen lose" id="loseScreen">
+  <div class="screen-inner">
   <div class="screen-box">
     <span class="screen-icon">💥</span>
     <div class="screen-title">Ka-BOOM!</div>
-    <p class="screen-sub">The kitchen wasn't safe this time, <span id="loseName" style="color:var(--danger);font-weight:800;"></span>. That's why FlameGuard exists! 😄</p>
-    <p class="screen-sub" style="margin:12px 0;">Score: <span id="loseScore" style="color:var(--danger);font-weight:800;font-size:1.1rem;"></span> pts</p>
-    <div class="leaderboard screen-lb" style="margin-bottom:16px;">
+    <p class="screen-sub">The kitchen wasn't safe, <span id="loseName" style="color:var(--danger);font-weight:800;"></span>. That's why FlameGuard exists! 😄</p>
+    <p class="screen-sub" style="margin:10px 0;">Score: <span id="loseScore" style="color:var(--danger);font-weight:800;font-size:1.1rem;"></span> pts</p>
+    <div class="leaderboard" style="margin-bottom:12px;">
       <div class="lb-title">🏆 Leaderboard</div>
-      <div id="loseLb"></div>
+      <div class="lb-scroll" id="loseLb"></div>
     </div>
     <button class="btn-primary" onclick="handleStart()">Try Again 💪</button>
-    <br>
-    <button class="btn-secondary" onclick="showStart()" style="margin-top:10px;">Back to Start</button>
+    <button class="btn-secondary" onclick="showStart()" style="margin-top:8px;">Back to Start</button>
+  </div>
   </div>
 </div>
 
@@ -757,57 +801,47 @@
     document.getElementById('statsScreen').classList.add('active');
 
     document.getElementById('statsContent').innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;">
-
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
-          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Avg Reaction</div>
-          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:${rating.color};">${avg ? avg+'ms' : '—'}</div>
-          <div style="font-size:0.75rem;color:${rating.color};font-weight:700;margin-top:4px;">${rating.label}</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-box-label">Avg Reaction</div>
+          <div class="stat-box-val" style="color:${rating.color};">${avg ? avg+'ms' : '—'}</div>
+          <div class="stat-box-sub" style="color:${rating.color};">${rating.label}</div>
         </div>
-
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
-          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Best Tap</div>
-          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:#00D26A;">${best ? best+'ms' : '—'}</div>
-          <div style="font-size:0.75rem;color:#7a8ca0;margin-top:4px;">Fastest reaction</div>
+        <div class="stat-box">
+          <div class="stat-box-label">Best Tap</div>
+          <div class="stat-box-val" style="color:#00D26A;">${best ? best+'ms' : '—'}</div>
+          <div class="stat-box-sub" style="color:#7a8ca0;">Fastest reaction</div>
         </div>
-
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
-          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Total Taps</div>
-          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:#FFD166;">${reactionTimes.length}</div>
-          <div style="font-size:0.75rem;color:#7a8ca0;margin-top:4px;">Successful hits</div>
+        <div class="stat-box">
+          <div class="stat-box-label">Total Taps</div>
+          <div class="stat-box-val" style="color:#FFD166;">${reactionTimes.length}</div>
+          <div class="stat-box-sub" style="color:#7a8ca0;">Successful hits</div>
         </div>
-
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px;text-align:center;">
-          <div style="font-size:0.7rem;color:#7a8ca0;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Final Score</div>
-          <div style="font-family:'Fredoka One',cursive;font-size:2rem;color:${won?'#FFD166':'#FF3860'};">${score}</div>
-          <div style="font-size:0.75rem;color:${won?'#FFD166':'#7a8ca0'};margin-top:4px;">${won?'Winner 🕯️':'Keep trying 💪'}</div>
+        <div class="stat-box">
+          <div class="stat-box-label">Final Score</div>
+          <div class="stat-box-val" style="color:${won?'#FFD166':'#FF3860'};">${score}</div>
+          <div class="stat-box-sub" style="color:${won?'#FFD166':'#7a8ca0'};">${won?'Winner 🕯️':'Keep trying 💪'}</div>
         </div>
-
       </div>
-
-      <!-- VS FlameGuard System -->
-      <div style="background:linear-gradient(135deg,rgba(255,77,0,0.1),rgba(255,140,66,0.06));border:1px solid rgba(255,77,0,0.3);border-radius:14px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:0.75rem;font-weight:700;color:#FF8C42;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">🔥 You vs FlameGuard System</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="background:linear-gradient(135deg,rgba(255,77,0,0.1),rgba(255,140,66,0.06));border:1px solid rgba(255,77,0,0.3);border-radius:12px;padding:12px;margin-bottom:12px;">
+        <div style="font-size:0.68rem;font-weight:700;color:#FF8C42;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">🔥 You vs FlameGuard System</div>
+        <div style="display:flex;align-items:center;justify-content:space-around;gap:8px;">
           <div style="text-align:center;flex:1;">
-            <div style="font-size:0.75rem;color:#7a8ca0;margin-bottom:4px;">Your Avg</div>
-            <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:${rating.color};">${avg ? avg+'ms' : '—'}</div>
+            <div style="font-size:0.7rem;color:#7a8ca0;margin-bottom:2px;">Your Avg</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:${rating.color};">${avg ? avg+'ms' : '—'}</div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:1.5rem;">⚡</div>
-            <div style="font-size:0.7rem;color:#7a8ca0;">vs</div>
-          </div>
+          <div style="text-align:center;font-size:1.2rem;">⚡</div>
           <div style="text-align:center;flex:1;">
-            <div style="font-size:0.75rem;color:#7a8ca0;margin-bottom:4px;">FlameGuard</div>
-            <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#FF4D00;">&lt;500ms</div>
+            <div style="font-size:0.7rem;color:#7a8ca0;margin-bottom:2px;">FlameGuard PLC</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:#FF4D00;">&lt;500ms</div>
           </div>
         </div>
-        <div style="margin-top:12px;padding:10px;background:rgba(0,0,0,0.2);border-radius:10px;font-size:0.85rem;line-height:1.5;color:#E8EAF0;text-align:center;">
+        <div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:0.78rem;line-height:1.5;color:#E8EAF0;text-align:center;">
           ${avg
             ? fasterThanSystem
-              ? `🏆 You reacted in <b>${avg}ms</b> — faster than most! But our PLC still beats you at <b>&lt;500ms guaranteed</b>, 24/7, while you sleep. 😄`
-              : `You reacted in <b>${avg}ms</b>. The FlameGuard PLC reacts in <b>&lt;500ms</b> — that's <b>${ratio}× faster</b> than you, and it never blinks. 🤖`
-            : 'Play more taps to see your reaction time vs our system!'
+              ? `🏆 You reacted in <b>${avg}ms</b>! Our PLC still guarantees <b>&lt;500ms</b>, 24/7, while you sleep. 😄`
+              : `You reacted in <b>${avg}ms</b>. The FlameGuard PLC is <b>${ratio}× faster</b> — and never blinks. 🤖`
+            : 'Tap more to see your reaction time vs our system!'
           }
         </div>
       </div>
