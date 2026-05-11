@@ -784,7 +784,7 @@
     const worst = reactionTimes.length ? Math.max(...reactionTimes) : null;
 
     // FlameGuard system response time for bragging
-    const SYSTEM_MS = 500;
+    const SYSTEM_MS = 10;
 
     function ratingLabel(ms) {
       if (ms < 250) return { label:'Lightning Fast ⚡', color:'#00D26A' };
@@ -833,13 +833,13 @@
           <div style="text-align:center;font-size:1.2rem;">⚡</div>
           <div style="text-align:center;flex:1;">
             <div style="font-size:0.7rem;color:#7a8ca0;margin-bottom:2px;">FlameGuard PLC</div>
-            <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:#FF4D00;">&lt;500ms</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.5rem;color:#FF4D00;">&lt;10ms</div>
           </div>
         </div>
         <div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;font-size:0.78rem;line-height:1.5;color:#E8EAF0;text-align:center;">
           ${avg
             ? fasterThanSystem
-              ? `🏆 You reacted in <b>${avg}ms</b>! Our PLC still guarantees <b>&lt;500ms</b>, 24/7, while you sleep. 😄`
+              ? `🏆 You reacted in <b>${avg}ms</b>! Our PLC still guarantees <b>&lt;10ms</b>, 24/7, while you sleep. 😄`
               : `You reacted in <b>${avg}ms</b>. The FlameGuard PLC is <b>${ratio}× faster</b> — and never blinks. 🤖`
             : 'Tap more to see your reaction time vs our system!'
           }
